@@ -17,7 +17,24 @@ $stmt->execute([$email]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$student) {
-    die("Error: No student profile linked to this account ($email). Please contact Admin.");
+    // Show a proper styled error page instead of a bare die()
+    require_once '../../includes/header.php';
+    ?>
+    <div class="d-flex justify-content-center align-items-center" style="min-height:80vh;">
+        <div class="text-center p-5">
+            <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size:4rem;"></i>
+            <h3 class="mt-3 fw-bold">Student Profile Not Found</h3>
+            <p class="text-muted">No student profile is linked to your account
+                (<strong><?= htmlspecialchars($email) ?></strong>).</p>
+            <p class="text-muted">Please contact the Admin to link your account to a student record.</p>
+            <a href="../auth/logout.php" class="btn btn-outline-secondary">
+                <i class="bi bi-box-arrow-left me-1"></i>Logout
+            </a>
+        </div>
+    </div>
+    <?php
+    require_once '../../includes/footer.php';
+    exit();
 }
 
 $student_id = $student['id'];

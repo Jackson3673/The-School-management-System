@@ -39,6 +39,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 $stmt = $pdo->prepare("INSERT INTO users (fullname, email, username, password, role) VALUES (?, ?, ?, ?, ?)");
                 if ($stmt->execute([$fullname, $email, $username, $password, $role])) {
+                    // If registering as a student, auto-create a stub student profile
+                    // so they can access the student dashboard immediately.
+                    if ($role === 'student') {
+                        $name_parts = explode(' ', trim($fullname), 2);
+                        $first = $name_parts[0];
+                        $last  = $name_parts[1] ?? '';
+                        $reg_no = strtoupper($username); // Use username as reg number placeholder
+                        // Check if student record already exists (avoid duplicate)
+                        $chk = $pdo->prepare("SELECT id FROM students WHERE email = ?");
+                        $chk->execute([$email]);
+                        if ($chk->rowCount() === 0) {
+                            $ins = $pdo->prepare(
+                                "INSERT INTO students (first_name, last_name, fullname, email, registration_number, program, year_of_study, current_semester, admission_date) "
+                                . "VALUES (?, ?, ?, ?, ?, 'General', 'Year 1', 'Semester 1', CURDATE())"
+                            );
+                            $ins->execute([$first, $last, $fullname, $email, $reg_no]);
+                        }
+                    }
                     $success = "Registration successful! You can now <a href='login.php' class='alert-link'>Login</a>.";
                     $fullname = $email = $username = "";
                 }

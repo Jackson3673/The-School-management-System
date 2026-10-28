@@ -71,18 +71,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt->execute([$first_name, $last_name, $fullname, $email, $phone, $registration_number, $program, $year_study, $semester, $admission_date, $dob, $gender, $address, $kin_name, $kin_phone, $kin_relation])) {
 
                 // AUTO-CREATE USER ACCOUNT
-                // Check if user exists first (by email or username)
+                // Check if user already exists by email or registration_number (username)
                 $stmt_u = $pdo->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
-                $stmt_u->execute([$email, $email]); // Use email as username
+                $stmt_u->execute([$email, $registration_number]);
 
                 if ($stmt_u->rowCount() == 0) {
                     $default_pass = password_hash('student123', PASSWORD_BCRYPT);
-                    // USE REGISTRATION NUMBER AS USERNAME
+                    // Username = Registration Number (e.g., BIT/2026/0001)
                     $stmt_user = $pdo->prepare("INSERT INTO users (fullname, email, username, password, role) VALUES (?, ?, ?, ?, 'student')");
                     $stmt_user->execute([$fullname, $email, $registration_number, $default_pass]);
-                    $user_msg = " User account created (Username: <strong>$registration_number</strong>, Pass: student123).";
+                    $user_msg = " Login account created (Username: <strong>$registration_number</strong>, Password: <strong>student123</strong>).";
                 } else {
-                    $user_msg = " User account already exists.";
+                    // Sync fullname and email if user account already exists
+                    $pdo->prepare("UPDATE users SET fullname=?, email=? WHERE username=?")->execute([$fullname, $email, $registration_number]);
+                    $user_msg = " Login account already exists and has been synced.";
                 }
 
                 $success = "Student added successfully. Admission No: <strong>$registration_number</strong>." . $user_msg;
