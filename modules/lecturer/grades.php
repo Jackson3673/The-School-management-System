@@ -5,7 +5,7 @@ require_once '../../includes/lecturer_auth.php';
 $message = "";
 
 // Handle save
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_marks'])) {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['submit_marks'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $message = "Invalid CSRF token.";
         $selected_class_id = intval($_POST['class_id']);

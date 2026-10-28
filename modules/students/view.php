@@ -414,7 +414,7 @@ foreach ($fees as $f) {
             <div class="px-3 py-2 rounded-3 bg-light border">
               <span class="text-muted small text-uppercase fw-bold me-2">Current Balance</span>
               <span class="fs-4 fw-bold <?= $balance > 0 ? 'text-danger' : 'text-success' ?>">
-                <?= number_format($balance, 2) ?>
+                <?= format_currency($balance) ?>
               </span>
             </div>
           </div>
@@ -427,7 +427,7 @@ foreach ($fees as $f) {
                     <th class="border-0 rounded-start">Date</th>
                     <th class="border-0">Description</th>
                     <th class="border-0">Type</th>
-                    <th class="text-end border-0 rounded-end">Amount</th>
+                    <th class="text-end border-0 rounded-end">Amount (<?= htmlspecialchars(get_currency_symbol()) ?>)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -443,7 +443,7 @@ foreach ($fees as $f) {
                         <?php endif; ?>
                       </td>
                       <td class="text-end fw-bold <?= $f['type'] === 'payment' ? 'text-success' : 'text-danger' ?>">
-                        <?= $f['type'] === 'payment' ? '+' : '-' ?>     <?= number_format($f['amount'], 2) ?>
+                        <?= $f['type'] === 'payment' ? '-' : '+' ?> <?= format_currency($f['amount']) ?>
                       </td>
                     </tr>
                   <?php endforeach; ?>

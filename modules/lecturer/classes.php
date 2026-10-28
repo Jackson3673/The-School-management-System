@@ -5,7 +5,7 @@ require_once '../../includes/lecturer_auth.php';
 $message = "";
 
 // Handle add class
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['add_class'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $message = "Invalid CSRF token.";
     } else {
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
 }
 
 // Handle add student to class
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_student'])) {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['add_student'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $message = "Invalid CSRF token.";
     } else {

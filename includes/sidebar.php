@@ -3,7 +3,8 @@
         Hope Academy<span>.</span>
     </div>
     <nav class="nav flex-column">
-        <?php if ($_SESSION['role'] === 'admin'): ?>
+        <?php $currentRole = $_SESSION['role'] ?? ''; ?>
+        <?php if ($currentRole === 'admin'): ?>
             <a href="../../modules/dashboard/admin.php"
                 class="nav-link <?= strpos($_SERVER['PHP_SELF'], 'dashboard/admin.php') ? 'active' : '' ?>">
                 <i class="bi bi-grid-fill"></i> Dashboard
@@ -43,7 +44,7 @@
                 <i class="bi bi-gear-fill"></i> Users
             </a>
 
-        <?php elseif ($_SESSION['role'] === 'lecturer'): ?>
+        <?php elseif ($currentRole === 'lecturer'): ?>
             <a href="../../modules/dashboard/lecturer.php"
                 class="nav-link <?= strpos($_SERVER['PHP_SELF'], 'dashboard/lecturer.php') ? 'active' : '' ?>">
                 <i class="bi bi-grid-fill"></i> Dashboard
@@ -65,7 +66,7 @@
                 <i class="bi bi-file-earmark-bar-graph"></i> Reports
             </a>
 
-        <?php elseif ($_SESSION['role'] === 'student'): ?>
+        <?php elseif ($currentRole === 'student'): ?>
             <a href="../../modules/dashboard/student.php"
                 class="nav-link <?= strpos($_SERVER['PHP_SELF'], 'dashboard/student.php') ? 'active' : '' ?>">
                 <i class="bi bi-grid-fill"></i> Dashboard

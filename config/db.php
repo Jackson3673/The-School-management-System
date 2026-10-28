@@ -52,4 +52,7 @@ try {
         </div>");
     }
 }
+
+// Global System Currency Configuration & Formatting Helpers
+require_once __DIR__ . '/currency.php';
 ?>

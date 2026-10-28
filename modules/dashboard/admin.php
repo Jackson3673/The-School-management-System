@@ -92,7 +92,7 @@ try {
                             <span class="text-success fw-bold">Revenue</span>
                             <i class="bi bi-wallet-fill fs-4 text-success opacity-50"></i>
                         </div>
-                        <h2 class="fw-bold mb-0 text-dark">$<?= number_format($total_revenue) ?></h2>
+                        <h2 class="fw-bold mb-0 text-dark"><?= format_currency($total_revenue, 0) ?></h2>
                         <small class="text-success">Total Collected</small>
                     </div>
                 </div>
@@ -130,7 +130,7 @@ try {
                                                 <div
                                                     class="<?= $act['type'] === 'payment' ? 'text-success' : 'text-danger' ?> fw-bold fs-5">
                                                     <?= $act['type'] === 'payment' ? '+' : '-' ?>
-                                                    $<?= number_format($act['amount'], 2) ?>
+                                                    <?= format_currency($act['amount']) ?>
                                                 </div>
                                                 <small
                                                     class="text-muted"><?= date('M d, h:i A', strtotime($act['transaction_date'])) ?></small>

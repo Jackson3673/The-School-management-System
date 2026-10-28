@@ -8,21 +8,39 @@ require_once '../../config/db.php';
 
 // Handle Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $student_id = $_POST['student_id'] ?? null;
-    $type = $_POST['type'] ?? 'invoice';
-    $amount = $_POST['amount'] ?? 0;
-    $description = trim($_POST['description']);
-    $transaction_date = $_POST['transaction_date'] ?? date('Y-m-d');
+    $action = $_POST['action'] ?? 'add_transaction';
 
-    if ($student_id && $amount > 0 && !empty($description)) {
-        $stmt = $pdo->prepare("INSERT INTO fees (student_id, type, amount, description, transaction_date) VALUES (?, ?, ?, ?, ?)");
-        if ($stmt->execute([$student_id, $type, $amount, $description, $transaction_date])) {
-            $success = "Transaction recorded successfully.";
+    if ($action === 'update_currency') {
+        $new_symbol = trim($_POST['currency_symbol'] ?? '');
+        $new_code = trim($_POST['currency_code'] ?? '');
+        $new_position = in_array($_POST['currency_position'] ?? '', ['before', 'after']) ? $_POST['currency_position'] : 'before';
+
+        if (!empty($new_symbol)) {
+            if (set_system_currency($new_symbol, $new_code ?: $new_symbol, $new_position)) {
+                $success = "Global currency updated to " . htmlspecialchars($new_symbol) . " successfully.";
+            } else {
+                $error = "Failed to update global currency.";
+            }
         } else {
-            $error = "Failed to record transaction.";
+            $error = "Currency symbol cannot be empty.";
         }
     } else {
-        $error = "All fields are required.";
+        $student_id = $_POST['student_id'] ?? null;
+        $type = $_POST['type'] ?? 'invoice';
+        $amount = $_POST['amount'] ?? 0;
+        $description = trim($_POST['description'] ?? '');
+        $transaction_date = $_POST['transaction_date'] ?? date('Y-m-d');
+
+        if ($student_id && $amount > 0 && !empty($description)) {
+            $stmt = $pdo->prepare("INSERT INTO fees (student_id, type, amount, description, transaction_date) VALUES (?, ?, ?, ?, ?)");
+            if ($stmt->execute([$student_id, $type, $amount, $description, $transaction_date])) {
+                $success = "Transaction recorded successfully.";
+            } else {
+                $error = "Failed to record transaction.";
+            }
+        } else {
+            $error = "All fields are required.";
+        }
     }
 }
 
@@ -64,12 +82,20 @@ $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div class="d-flex gap-2">
-                    <!-- Potential place for filters/search -->
+                    <span class="badge bg-light text-dark border px-3 py-2 d-flex align-items-center">
+                        <i class="bi bi-cash-stack me-2 text-primary"></i> Active Currency: <strong class="ms-1 text-primary"><?= htmlspecialchars(get_currency_symbol()) ?> (<?= htmlspecialchars(get_currency_code()) ?>)</strong>
+                    </span>
                 </div>
-                <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
-                    data-bs-target="#addTransactionModal">
-                    <i class="bi bi-plus-lg me-2"></i> New Transaction
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#currencySettingsModal">
+                        <i class="bi bi-gear-fill me-1"></i> Currency Settings
+                    </button>
+                    <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#addTransactionModal">
+                        <i class="bi bi-plus-lg me-2"></i> New Transaction
+                    </button>
+                </div>
             </div>
 
             <?php if (isset($success)): ?>
@@ -99,7 +125,7 @@ $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <th>Student</th>
                                     <th>Description</th>
                                     <th>Type</th>
-                                    <th class="text-end pe-4">Amount</th>
+                                    <th class="text-end pe-4">Amount (<?= htmlspecialchars(get_currency_symbol()) ?>)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -130,7 +156,7 @@ $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <td
                                             class="text-end pe-4 fw-bold <?= $t['type'] === 'payment' ? 'text-success' : 'text-danger' ?>">
                                             <?= $t['type'] === 'payment' ? '+' : '-' ?>
-                                            <?= number_format($t['amount'], 2) ?>
+                                            <?= format_currency($t['amount']) ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -152,6 +178,7 @@ $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+                <input type="hidden" name="action" value="add_transaction">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Student</label>
@@ -174,7 +201,7 @@ $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="col-md-6">
                             <label class="form-label">Amount</label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text"><?= htmlspecialchars(get_currency_symbol()) ?></span>
                                 <input type="number" name="amount" step="0.01" class="form-control" placeholder="0.00"
                                     required>
                             </div>
@@ -201,5 +228,79 @@ $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 </div>
+
+<!-- Global Currency Settings Modal -->
+<div class="modal fade" id="currencySettingsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-gear-wide-connected me-2 text-primary"></i>Global Currency Setting</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="update_currency">
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        This setting controls the currency symbol and format across the entire system, including Student Fee Statements, Admin Dashboards, and Financial Reports.
+                    </p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Preset</label>
+                        <select class="form-select" id="currencyPreset" onchange="applyCurrencyPreset(this.value)">
+                            <option value="">-- Choose Preset or type below --</option>
+                            <option value="KSh|KES|before" <?= get_currency_symbol() === 'KSh' ? 'selected' : '' ?>>KSh - Kenyan Shilling (Default / MPESA)</option>
+                            <option value="KES|KES|before" <?= get_currency_symbol() === 'KES' ? 'selected' : '' ?>>KES - Kenyan Shilling (ISO Code)</option>
+                            <option value="$|USD|before" <?= get_currency_symbol() === '$' ? 'selected' : '' ?>>$ - US Dollar (USD)</option>
+                            <option value="€|EUR|before" <?= get_currency_symbol() === '€' ? 'selected' : '' ?>>€ - Euro (EUR)</option>
+                            <option value="£|GBP|before" <?= get_currency_symbol() === '£' ? 'selected' : '' ?>>£ - British Pound (GBP)</option>
+                            <option value="UGX|UGX|before" <?= get_currency_symbol() === 'UGX' ? 'selected' : '' ?>>UGX - Ugandan Shilling</option>
+                            <option value="TZS|TZS|before" <?= get_currency_symbol() === 'TZS' ? 'selected' : '' ?>>TZS - Tanzanian Shilling</option>
+                            <option value="custom">Custom Currency...</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Currency Symbol</label>
+                            <input type="text" name="currency_symbol" id="currencySymbolInput" class="form-control" 
+                                value="<?= htmlspecialchars(get_currency_symbol()) ?>" required placeholder="e.g. KSh, $, €">
+                            <div class="form-text small">Symbol shown next to amounts</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Currency Code</label>
+                            <input type="text" name="currency_code" id="currencyCodeInput" class="form-control" 
+                                value="<?= htmlspecialchars(get_currency_code()) ?>" required placeholder="e.g. KES, USD">
+                            <div class="form-text small">ISO 3-letter currency code</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Symbol Position</label>
+                        <select name="currency_position" id="currencyPositionSelect" class="form-select">
+                            <option value="before" <?= get_currency_position() === 'before' ? 'selected' : '' ?>>Before Amount (e.g. <?= htmlspecialchars(get_currency_symbol()) ?> 5,000.00)</option>
+                            <option value="after" <?= get_currency_position() === 'after' ? 'selected' : '' ?>>After Amount (e.g. 5,000.00 <?= htmlspecialchars(get_currency_symbol()) ?>)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Save Global Setting</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function applyCurrencyPreset(val) {
+    if (!val || val === 'custom') return;
+    const parts = val.split('|');
+    if (parts.length === 3) {
+        document.getElementById('currencySymbolInput').value = parts[0];
+        document.getElementById('currencyCodeInput').value = parts[1];
+        document.getElementById('currencyPositionSelect').value = parts[2];
+    }
+}
+</script>
 
 <?php require_once '../../includes/footer.php'; ?>

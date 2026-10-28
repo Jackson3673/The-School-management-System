@@ -94,6 +94,32 @@ try {
     )");
     echo "Table 'academic_records' checked/created.<br>";
 
+    // 7. Fees Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS fees (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        type ENUM('invoice', 'payment') NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        description VARCHAR(255) NOT NULL,
+        transaction_date DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+    )");
+    echo "Table 'fees' checked/created.<br>";
+
+    // 8. System Settings Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS system_settings (
+        setting_key VARCHAR(50) NOT NULL PRIMARY KEY,
+        setting_value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+    $pdo->exec("INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES 
+        ('currency_symbol', 'KSh'),
+        ('currency_code', 'KES'),
+        ('currency_position', 'before')
+    ");
+    echo "Table 'system_settings' checked/created.<br>";
+
     // Seed Default Admin (password: admin123)
     $admin_pass = password_hash('admin123', PASSWORD_BCRYPT);
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'admin'");

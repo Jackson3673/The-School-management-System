@@ -91,7 +91,7 @@ foreach ($fees as $f) {
                     <div class="ms-auto text-end d-none d-md-block">
                          <small class="d-block opacity-75 text-uppercase fw-bold ls-1">Current Balance</small>
                          <h2 class="fw-bold mb-0">
-                            <?= ($balance > 0) ? '-$' . number_format($balance, 2) : '$' . number_format(abs($balance), 2) ?>
+                            <?= ($balance > 0) ? '-' . format_currency($balance) : format_currency(abs($balance)) ?>
                          </h2>
                          <small class="badge bg-white bg-opacity-25 mt-1">
                             <?= ($balance > 0) ? 'Outstanding' : 'Credit' ?>
@@ -297,7 +297,7 @@ foreach ($fees as $f) {
                                         <tr>
                                             <th class="ps-4">Date</th>
                                             <th>Description</th>
-                                            <th class="text-end pe-4">Amount</th>
+                                            <th class="text-end pe-4">Amount (<?= htmlspecialchars(get_currency_symbol()) ?>)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -321,7 +321,7 @@ foreach ($fees as $f) {
                                                     </td>
                                                     <td class="text-end fw-bold pe-4 <?= $f['type'] == 'payment' ? 'text-success' : 'text-danger' ?>">
                                                          <?= $f['type'] == 'payment' ? '-' : '+' ?> 
-                                                         $<?= number_format($f['amount'], 2) ?>
+                                                         <?= format_currency($f['amount']) ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>

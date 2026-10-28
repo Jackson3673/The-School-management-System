@@ -1,7 +1,10 @@
 <?php
 // includes/navbar.php
-// Assumes session_start() is called in the parent file
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 $isLoggedIn = isset($_SESSION['user_id']);
+$role = $_SESSION['role'] ?? '';
 // Auto-detect project base URL dynamically for plug-and-play anywhere
 $docRoot = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT'] ?? ''));
 $appRoot = str_replace('\\', '/', realpath(__DIR__ . '/..'));
@@ -22,13 +25,23 @@ $rootPath = rtrim(str_replace('\\', '/', $rootPath), '/');
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <?php if ($isLoggedIn): ?>
                     <li class="nav-item d-flex align-items-center text-white me-3">
-                        Welcome,
-                        <?= htmlspecialchars($_SESSION['fullname'] ?? 'User') ?> (
-                        <?= ucfirst($role) ?>)
+                        Welcome, <?= htmlspecialchars($_SESSION['fullname'] ?? 'User') ?><?= !empty($role) ? ' (' . ucfirst($role) . ')' : '' ?>
                     </li>
                     <?php if ($role === 'lecturer'): ?>
                         <li class="nav-item">
                             <a class="nav-link" href="<?= $rootPath ?>/modules/lecturer/dashboard.php">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?= $rootPath ?>/modules/lecturer/classes.php">My Classes</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?= $rootPath ?>/modules/lecturer/attendance.php">Attendance</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?= $rootPath ?>/modules/lecturer/grades.php">Grades</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?= $rootPath ?>/modules/lecturer/students.php">Students</a>
                         </li>
                     <?php elseif ($role === 'admin'): ?>
                         <li class="nav-item">

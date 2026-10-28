@@ -5,7 +5,7 @@
             <?= $page_title ?? 'Dashboard' ?>
         </h2>
         <p class="text-muted m-0">
-            <?= $page_subtitle ?? 'Welcome back, ' . htmlspecialchars($_SESSION['fullname']) ?>
+            <?= $page_subtitle ?? ('Welcome back, ' . htmlspecialchars($_SESSION['fullname'] ?? 'User')) ?>
         </p>
     </div>
 
