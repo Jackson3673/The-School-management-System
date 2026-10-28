@@ -1,0 +1,51 @@
+Login attempt for: BIT/2026/0001
+User found. Role: student
+Password VERIFIED.
+Session set. Role in session: student
+Redirecting to student.php
+Login attempt for: Admin
+User found. Role: admin
+Password VERIFIED.
+Session set. Role in session: admin
+Redirecting to admin.php
+Login attempt for: lecture
+User NOT found.
+Login attempt for: Lecture
+User NOT found.
+Login attempt for: Lecturer
+User NOT found.
+Login attempt for: Test
+User found. Role: lecturer
+Password FAILED.
+Login attempt for: Test
+User found. Role: lecturer
+Password VERIFIED.
+Session set. Role in session: lecturer
+Redirecting to lecturer.php
+Login attempt for: Admin
+User found. Role: admin
+Password VERIFIED.
+Session set. Role in session: admin
+Redirecting to admin.php
+Login attempt for: Lecturer
+User NOT found.
+Login attempt for: test
+User found. Role: lecturer
+Password VERIFIED.
+Session set. Role in session: lecturer
+Redirecting to lecturer.php
+Login attempt for: Admin
+User found. Role: admin
+Password VERIFIED.
+Session set. Role in session: admin
+Redirecting to admin.php
+Login attempt for: test
+User found. Role: lecturer
+Password VERIFIED.
+Session set. Role in session: lecturer
+Redirecting to lecturer.php
+Login attempt for: Admin
+User found. Role: admin
+Password VERIFIED.
+Session set. Role in session: admin
+Redirecting to admin.php
