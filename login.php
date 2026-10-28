@@ -39,9 +39,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             // Redirect
             if ($role === 'admin') {
-                header("Location: admin/d.php");
+                header("Location: modules/dashboard/admin.php");
+            } elseif ($role === 'student') {
+                header("Location: modules/dashboard/student.php");
             } else {
-                header("Location: lec/d.php");
+                header("Location: modules/lecturer/dashboard.php");
             }
             exit();
         } else {
