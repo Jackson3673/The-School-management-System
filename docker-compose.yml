@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  web:
+    image: php:8.2-apache
+    container_name: school_web
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    environment:
+      DB_HOST: db
+      DB_NAME: naini
+      DB_USER: root
+      DB_PASS: rootpassword
+    command: >
+      bash -c "docker-php-ext-install pdo pdo_mysql && apache2-foreground"
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:10.4
+    container_name: school_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: naini
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./setup_db.sql:/docker-entrypoint-initdb.d/setup_db.sql
+
+volumes:
+  db_data:

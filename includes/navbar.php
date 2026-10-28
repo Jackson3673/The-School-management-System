@@ -2,8 +2,11 @@
 // includes/navbar.php
 // Assumes session_start() is called in the parent file
 $isLoggedIn = isset($_SESSION['user_id']);
-$role = $_SESSION['role'] ?? '';
-$rootPath = '/naini'; // Base URL path
+// Auto-detect project base URL dynamically for plug-and-play anywhere
+$docRoot = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT'] ?? ''));
+$appRoot = str_replace('\\', '/', realpath(__DIR__ . '/..'));
+$rootPath = ($docRoot !== '' && strpos($appRoot, $docRoot) === 0) ? substr($appRoot, strlen($docRoot)) : '';
+$rootPath = rtrim(str_replace('\\', '/', $rootPath), '/');
 ?>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 mb-4">
