@@ -1,59 +1,58 @@
 <?php
 session_start();
+require_once __DIR__ . '/config/db.php';
 
-// DB Connection
-$host = "localhost";
-$user = "root";
-$pass = ""; // update if needed
-$db   = "naini";
-
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+// Redirect if already logged in
+if (isset($_SESSION["user_id"]) && isset($_SESSION["role"])) {
+    if ($_SESSION["role"] === 'admin') {
+        header("Location: modules/dashboard/admin.php");
+    } elseif ($_SESSION["role"] === 'student') {
+        header("Location: modules/dashboard/student.php");
+    } else {
+        header("Location: modules/lecturer/dashboard.php");
+    }
+    exit();
 }
 
 // Handle login
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $username = trim($_POST["username"]);
-    $password = $_POST["password"];
+    $loginInput = trim($_POST["username"] ?? "");
+    $password = $_POST["password"] ?? "";
 
-    $stmt = $conn->prepare("SELECT id, fullname, email, username, password, role FROM users WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $stmt->store_result();
-
-    // If user exists
-    if ($stmt->num_rows === 1) {
-        $stmt->bind_result($id, $fullname, $email, $username_db, $hashed_password, $role);
-        $stmt->fetch();
-
-        if (password_verify($password, $hashed_password)) {
-            // Save to session
-            $_SESSION["user_id"]   = $id;
-            $_SESSION["username"]  = $username_db;
-            $_SESSION["email"]     = $email;
-            $_SESSION["fullname"]  = $fullname;
-            $_SESSION["role"]      = $role;
-
-            // Redirect
-            if ($role === 'admin') {
-                header("Location: modules/dashboard/admin.php");
-            } elseif ($role === 'student') {
-                header("Location: modules/dashboard/student.php");
-            } else {
-                header("Location: modules/lecturer/dashboard.php");
-            }
-            exit();
-        } else {
-            $error = "Invalid password.";
-        }
+    if (empty($loginInput) || empty($password)) {
+        $error = "Please enter both username and password.";
     } else {
-        $error = "User not found.";
-    }
+        try {
+            $stmt = $pdo->prepare("SELECT id, fullname, email, username, password, role FROM users WHERE username = ? OR email = ?");
+            $stmt->execute([$loginInput, $loginInput]);
+            $user = $stmt->fetch();
 
-    $stmt->close();
+            if ($user && password_verify($password, $user['password'])) {
+                // Save to session
+                $_SESSION["user_id"]   = $user['id'];
+                $_SESSION["username"]  = $user['username'];
+                $_SESSION["email"]     = $user['email'];
+                $_SESSION["fullname"]  = $user['fullname'];
+                $_SESSION["role"]      = $user['role'];
+
+                // Redirect
+                if ($user['role'] === 'admin') {
+                    header("Location: modules/dashboard/admin.php");
+                } elseif ($user['role'] === 'student') {
+                    header("Location: modules/dashboard/student.php");
+                } else {
+                    header("Location: modules/lecturer/dashboard.php");
+                }
+                exit();
+            } else {
+                $error = "Invalid username or password.";
+            }
+        } catch (PDOException $e) {
+            $error = "Database error: " . $e->getMessage();
+        }
+    }
 }
 ?>
 
@@ -61,8 +60,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login - Hope Academy</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 
@@ -75,13 +76,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
         <div class="card-body">
           <?php if ($error): ?>
-            <div class="alert alert-danger"><?= $error ?></div>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
           <?php endif; ?>
 
           <form method="POST" action="">
             <div class="mb-3">
-              <label class="form-label">Username</label>
-              <input type="text" name="username" class="form-control" required>
+              <label class="form-label">Username or Email</label>
+              <input type="text" name="username" class="form-control" required autofocus>
             </div>
             <div class="mb-3">
               <label class="form-label">Password</label>
@@ -91,7 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
           </form>
         </div>
         <div class="card-footer text-center">
-          Don't have an account? <a href="register.php">Register here</a>
+          Don't have an account? <a href="modules/auth/register.php">Register here</a>
         </div>
       </div>
     </div>
