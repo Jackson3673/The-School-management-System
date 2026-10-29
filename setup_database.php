@@ -10,7 +10,7 @@ try {
 
     // Create database if not exists
     $pdo->exec("CREATE DATABASE IF NOT EXISTS `$db` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-    echo "Database '$db' checked/created.<br>";
+    echo "Database '$db' checked/created.<br>\n";
 
     // Connect to the specific database
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
@@ -26,7 +26,7 @@ try {
         role ENUM('admin', 'lecturer', 'student') NOT NULL DEFAULT 'student',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
-    echo "Table 'users' checked/created.<br>";
+    echo "Table 'users' checked/created.<br>\n";
 
     // 2. Classes Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS classes (
@@ -36,7 +36,7 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (lecturer_id) REFERENCES users(id) ON DELETE CASCADE
     )");
-    echo "Table 'classes' checked/created.<br>";
+    echo "Table 'classes' checked/created.<br>\n";
 
     // 3. Students Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS students (
@@ -52,7 +52,7 @@ try {
         next_of_kin_relation VARCHAR(50) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
-    echo "Table 'students' checked/created.<br>";
+    echo "Table 'students' checked/created.<br>\n";
 
     // 4. Class Students (Many-to-Many)
     $pdo->exec("CREATE TABLE IF NOT EXISTS class_students (
@@ -64,7 +64,7 @@ try {
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
         UNIQUE KEY unique_assignment (class_id, student_id)
     )");
-    echo "Table 'class_students' checked/created.<br>";
+    echo "Table 'class_students' checked/created.<br>\n";
 
     // 5. Attendance
     $pdo->exec("CREATE TABLE IF NOT EXISTS attendance (
@@ -78,7 +78,7 @@ try {
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
         UNIQUE KEY unique_daily_attendance (class_id, student_id, attendance_date)
     )");
-    echo "Table 'attendance' checked/created.<br>";
+    echo "Table 'attendance' checked/created.<br>\n";
 
     // 6. Academic Records
     $pdo->exec("CREATE TABLE IF NOT EXISTS academic_records (
@@ -92,7 +92,7 @@ try {
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
         UNIQUE KEY unique_record (class_id, student_id)
     )");
-    echo "Table 'academic_records' checked/created.<br>";
+    echo "Table 'academic_records' checked/created.<br>\n";
 
     // 7. Fees Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS fees (
@@ -105,7 +105,7 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
     )");
-    echo "Table 'fees' checked/created.<br>";
+    echo "Table 'fees' checked/created.<br>\n";
 
     // 8. System Settings Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS system_settings (
@@ -118,7 +118,7 @@ try {
         ('currency_code', 'KES'),
         ('currency_position', 'before')
     ");
-    echo "Table 'system_settings' checked/created.<br>";
+    echo "Table 'system_settings' checked/created.<br>\n";
 
     // Seed Default Admin (password: admin123)
     $admin_pass = password_hash('admin123', PASSWORD_BCRYPT);
@@ -127,10 +127,34 @@ try {
     if ($stmt->fetchColumn() == 0) {
         $stmt = $pdo->prepare("INSERT INTO users (fullname, email, username, password, role) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute(['System Admin', 'admin@hopeacademy.com', 'admin', $admin_pass, 'admin']);
-        echo "Default admin created (User: admin, Pass: admin123).<br>";
+        echo "Default admin created (User: admin, Pass: admin123).<br>\n";
+    }
+
+    // Seed Default Lecturer (password: test123)
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'lecturer'");
+    $stmt->execute();
+    if ($stmt->fetchColumn() == 0) {
+        $lect_pass = password_hash('test123', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("INSERT INTO users (fullname, email, username, password, role) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute(['Test Lecturer', 'test@hopeacademy.com', 'Test', $lect_pass, 'lecturer']);
+        echo "Default lecturer created (User: Test, Pass: test123).<br>\n";
+    }
+
+    // Seed Default Student (password: student123)
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'student'");
+    $stmt->execute();
+    if ($stmt->fetchColumn() == 0) {
+        $student_pass = password_hash('student123', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("INSERT INTO users (fullname, email, username, password, role) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute(['Jane Doe', 'student@hopeacademy.com', 'BIT/2026/0001', $student_pass, 'student']);
+
+        $stmtStudent = $pdo->prepare("INSERT INTO students (fullname, email, registration_number) VALUES (?, ?, ?)");
+        $stmtStudent->execute(['Jane Doe', 'student@hopeacademy.com', 'BIT/2026/0001']);
+        echo "Default student created (User: BIT/2026/0001, Pass: student123).<br>\n";
     }
 
 } catch (PDOException $e) {
-    die("DB Setup Error: " . $e->getMessage());
+    echo "DB Setup Error: " . $e->getMessage() . "\n";
+    exit(1);
 }
 ?>

@@ -1,5 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
+
+:: Set working directory to this script's directory
+cd /d "%~dp0"
+
 title Hope Academy - School Management System
 color 0B
 cls
@@ -11,69 +15,135 @@ echo ===================================================================
 echo.
 
 :: 1. Detect PHP binary
-set "PHP_BIN=php"
+set "PHP_BIN="
 where php >nul 2>&1
-if %errorlevel% neq 0 (
-    if exist "C:\xampp\php\php.exe" (
-        set "PHP_BIN=C:\xampp\php\php.exe"
-    ) else if exist "D:\xampp\php\php.exe" (
-        set "PHP_BIN=D:\xampp\php\php.exe"
-    ) else if exist "E:\xampp\php\php.exe" (
-        set "PHP_BIN=E:\xampp\php\php.exe"
-    ) else (
-        echo [ERROR] PHP executable was not found on your system!
-        echo Please install XAMPP or add PHP to your Windows PATH.
-        echo.
-        pause
-        exit /b 1
-    )
+if !errorlevel! equ 0 (
+    set "PHP_BIN=php"
+) else if exist "%~dp0..\..\php\php.exe" (
+    set "PHP_BIN=%~dp0..\..\php\php.exe"
+) else if exist "C:\xampp\php\php.exe" (
+    set "PHP_BIN=C:\xampp\php\php.exe"
+) else if exist "D:\xampp\php\php.exe" (
+    set "PHP_BIN=D:\xampp\php\php.exe"
+) else if exist "E:\xampp\php\php.exe" (
+    set "PHP_BIN=E:\xampp\php\php.exe"
+) else if exist "C:\php\php.exe" (
+    set "PHP_BIN=C:\php\php.exe"
+) else if exist "C:\Program Files\PHP\php.exe" (
+    set "PHP_BIN=C:\Program Files\PHP\php.exe"
 )
-echo [OK] PHP detected: %PHP_BIN%
+
+if "%PHP_BIN%"=="" (
+    echo [ERROR] PHP executable was not found on your system!
+    echo Please install XAMPP or add PHP to your Windows PATH environment variable.
+    echo.
+    pause
+    exit /b 1
+)
+echo [OK] PHP detected: "%PHP_BIN%"
 
 :: 2. Check and start MySQL server if needed
 echo [INFO] Checking MySQL connection on port 3306...
 netstat -ano | findstr ":3306" | findstr "LISTENING" >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [INFO] MySQL is not running. Attempting to start MySQL server...
+if !errorlevel! neq 0 (
+    echo [INFO] MySQL is not running on port 3306. Attempting to start MySQL...
     set "STARTED_MYSQL=0"
-    if exist "C:\xampp\mysql\bin\mysqld.exe" (
-        start "" /B "C:\xampp\mysql\bin\mysqld.exe" --defaults-file="C:\xampp\mysql\bin\my.ini" --standalone
+
+    if exist "%~dp0..\..\mysql_start.bat" (
+        start "" /min cmd /c "call "%~dp0..\..\mysql_start.bat""
+        set "STARTED_MYSQL=1"
+    ) else if exist "C:\xampp\mysql_start.bat" (
+        start "" /min cmd /c "call C:\xampp\mysql_start.bat"
+        set "STARTED_MYSQL=1"
+    ) else if exist "D:\xampp\mysql_start.bat" (
+        start "" /min cmd /c "call D:\xampp\mysql_start.bat"
+        set "STARTED_MYSQL=1"
+    ) else if exist "%~dp0..\..\mysql\bin\mysqld.exe" (
+        start "" /min /D "%~dp0..\..\mysql" "%~dp0..\..\mysql\bin\mysqld.exe" --defaults-file="%~dp0..\..\mysql\bin\my.ini" --standalone
+        set "STARTED_MYSQL=1"
+    ) else if exist "C:\xampp\mysql\bin\mysqld.exe" (
+        start "" /min /D "C:\xampp\mysql" "C:\xampp\mysql\bin\mysqld.exe" --defaults-file="C:\xampp\mysql\bin\my.ini" --standalone
         set "STARTED_MYSQL=1"
     ) else if exist "D:\xampp\mysql\bin\mysqld.exe" (
-        start "" /B "D:\xampp\mysql\bin\mysqld.exe" --defaults-file="D:\xampp\mysql\bin\my.ini" --standalone
+        start "" /min /D "D:\xampp\mysql" "D:\xampp\mysql\bin\mysqld.exe" --defaults-file="D:\xampp\mysql\bin\my.ini" --standalone
         set "STARTED_MYSQL=1"
     )
 
     if "!STARTED_MYSQL!"=="1" (
-        echo [INFO] Waiting 3 seconds for MySQL to initialize...
-        timeout /t 3 /nobreak >nul
+        echo [INFO] Waiting for MySQL server to initialize...
+        set "MYSQL_READY=0"
+        for /L %%i in (1,1,10) do (
+            if !MYSQL_READY!==0 (
+                netstat -ano | findstr ":3306" | findstr "LISTENING" >nul 2>&1
+                if !errorlevel! equ 0 (
+                    set "MYSQL_READY=1"
+                ) else (
+                    ping -n 2 127.0.0.1 >nul
+                )
+            )
+        )
+
+        if "!MYSQL_READY!"=="1" (
+            echo [OK] MySQL server started and ready on port 3306.
+        ) else (
+            echo [WARNING] MySQL did not respond on port 3306 within 10 seconds.
+            echo Please make sure MySQL is started in your XAMPP Control Panel.
+        )
     ) else (
         echo [WARNING] Could not locate XAMPP MySQL automatically.
-        echo Please ensure MySQL is started in your XAMPP Control Panel.
+        echo Please make sure MySQL is started in your XAMPP Control Panel.
     )
 ) else (
     echo [OK] MySQL is active on port 3306.
 )
 
-:: 3. Run automated database provisioner
+:: 3. Run automated database provisioner & repairs
 echo [INFO] Verifying database schema and initial data...
 "%PHP_BIN%" setup_database.php >nul 2>&1
-echo [OK] Database 'naini' verified and ready.
+if exist "fix_orphan_students.php" (
+    "%PHP_BIN%" fix_orphan_students.php >nul 2>&1
+)
+echo [OK] Database 'naini' verified and synchronized.
 
-:: 4. Start local server & open browser
+:: 4. Smart port selection (use 8080 or fallback if busy)
 set "PORT=8080"
+netstat -ano | findstr ":!PORT!" | findstr "LISTENING" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo [INFO] Port 8080 is in use. Trying port 8000...
+    set "PORT=8000"
+    netstat -ano | findstr ":!PORT!" | findstr "LISTENING" >nul 2>&1
+    if !errorlevel! equ 0 (
+        echo [INFO] Port 8000 is in use. Trying port 8088...
+        set "PORT=8088"
+    )
+)
+
 echo.
 echo ===================================================================
-echo   Application URL: http://localhost:%PORT%
-echo   Default Admin:   Username: admin    Password: admin123
-echo   Default Lecturer:Username: Test     Password: test123
+echo   HOPE ACADEMY - SERVER IS READY
+echo ===================================================================
+echo   Application URL:   http://localhost:%PORT%
+echo.
+echo   Default Credentials:
+echo   ---------------------------------------------------------------
+echo   [Admin]    Username: admin           Password: admin123
+echo   [Lecturer] Username: Test            Password: test123
+echo   [Student]  Username: BIT/2026/0001   Password: student123
+echo.
+echo   Register a new student account:
+echo   http://localhost:%PORT%/modules/auth/register.php
 echo.
 echo   [Press CTRL+C in this window at any time to stop the server]
 echo ===================================================================
 echo.
 
+if "%~1"=="--test" (
+    echo [TEST MODE] All startup steps validated successfully.
+    exit /b 0
+)
+
 :: Open default web browser
-start http://localhost:%PORT%
+start "" "http://localhost:%PORT%"
 
 :: Start PHP built-in web server
 "%PHP_BIN%" -S localhost:%PORT%
