@@ -46,7 +46,7 @@ echo [OK] PHP detected: "%PHP_BIN%"
 echo [INFO] Checking MySQL connection on port 3306...
 netstat -ano | findstr ":3306" | findstr "LISTENING" >nul 2>&1
 if !errorlevel! neq 0 (
-    echo [INFO] MySQL is not running on port 3306. Attempting to start MySQL...
+    echo [INFO] MySQL is not running on port 3306. Attempting to start MySQL server...
     set "STARTED_MYSQL=0"
 
     if exist "%~dp0..\..\mysql_start.bat" (
@@ -72,7 +72,7 @@ if !errorlevel! neq 0 (
     if "!STARTED_MYSQL!"=="1" (
         echo [INFO] Waiting for MySQL server to initialize...
         set "MYSQL_READY=0"
-        for /L %%i in (1,1,10) do (
+        for /L %%i in (1,1,12) do (
             if !MYSQL_READY!==0 (
                 netstat -ano | findstr ":3306" | findstr "LISTENING" >nul 2>&1
                 if !errorlevel! equ 0 (
@@ -86,7 +86,7 @@ if !errorlevel! neq 0 (
         if "!MYSQL_READY!"=="1" (
             echo [OK] MySQL server started and ready on port 3306.
         ) else (
-            echo [WARNING] MySQL did not respond on port 3306 within 10 seconds.
+            echo [WARNING] MySQL did not respond on port 3306 within 12 seconds.
             echo Please make sure MySQL is started in your XAMPP Control Panel.
         )
     ) else (
@@ -97,23 +97,58 @@ if !errorlevel! neq 0 (
     echo [OK] MySQL is active on port 3306.
 )
 
-:: 3. Run automated database provisioner & repairs
-echo [INFO] Verifying database schema and initial data...
-"%PHP_BIN%" setup_database.php >nul 2>&1
+:: 3. Locate MySQL CLI if available and ensure database 'naini' exists
+set "MYSQL_CLI="
+if exist "%~dp0..\..\mysql\bin\mysql.exe" (
+    set "MYSQL_CLI=%~dp0..\..\mysql\bin\mysql.exe"
+) else if exist "C:\xampp\mysql\bin\mysql.exe" (
+    set "MYSQL_CLI=C:\xampp\mysql\bin\mysql.exe"
+) else if exist "D:\xampp\mysql\bin\mysql.exe" (
+    set "MYSQL_CLI=D:\xampp\mysql\bin\mysql.exe"
+) else if exist "E:\xampp\mysql\bin\mysql.exe" (
+    set "MYSQL_CLI=E:\xampp\mysql\bin\mysql.exe"
+) else (
+    where mysql >nul 2>&1
+    if !errorlevel! equ 0 set "MYSQL_CLI=mysql"
+)
+
+if not "%MYSQL_CLI%"=="" (
+    echo [INFO] Ensuring database 'naini' exists via MySQL client...
+    "%MYSQL_CLI%" -u root -h 127.0.0.1 -e "CREATE DATABASE IF NOT EXISTS naini CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" >nul 2>&1
+    if exist "%~dp0setup_db.sql" (
+        "%MYSQL_CLI%" -u root -h 127.0.0.1 naini < "%~dp0setup_db.sql" >nul 2>&1
+    )
+)
+
+:: 4. Run automated database provisioner & initial tables/seeds
+echo.
+echo [INFO] Running database provisioner (setup_database.php)...
+echo ---------------------------------------------------------------
+"%PHP_BIN%" setup_database.php
+if !errorlevel! neq 0 (
+    echo.
+    echo [ERROR] setup_database.php encountered an error connecting to MySQL.
+    echo Please make sure MySQL is running in XAMPP and try again.
+    echo.
+    pause
+    exit /b 1
+)
+echo ---------------------------------------------------------------
+echo [OK] Database 'naini' verified and synchronized.
+
 if exist "fix_orphan_students.php" (
     "%PHP_BIN%" fix_orphan_students.php >nul 2>&1
 )
-echo [OK] Database 'naini' verified and synchronized.
 
-:: 4. Smart port selection (use 8080 or fallback if busy)
-set "PORT=8080"
+:: 5. Smart port selection (use 8000 or fallback)
+set "PORT=8000"
 netstat -ano | findstr ":!PORT!" | findstr "LISTENING" >nul 2>&1
 if !errorlevel! equ 0 (
-    echo [INFO] Port 8080 is in use. Trying port 8000...
-    set "PORT=8000"
+    echo [INFO] Port 8000 is in use. Trying port 8080...
+    set "PORT=8080"
     netstat -ano | findstr ":!PORT!" | findstr "LISTENING" >nul 2>&1
     if !errorlevel! equ 0 (
-        echo [INFO] Port 8000 is in use. Trying port 8088...
+        echo [INFO] Port 8080 is in use. Trying port 8088...
         set "PORT=8088"
     )
 )
