@@ -14,33 +14,63 @@ echo               One-Click Plug ^& Play Launcher
 echo ===================================================================
 echo.
 
-:: 1. Detect PHP binary
+:: 1. Detect PHP binary (prioritize XAMPP PHP with MySQL extension support)
 set "PHP_BIN="
-where php >nul 2>&1
-if !errorlevel! equ 0 (
-    set "PHP_BIN=php"
-) else if exist "%~dp0..\..\php\php.exe" (
-    set "PHP_BIN=%~dp0..\..\php\php.exe"
-) else if exist "C:\xampp\php\php.exe" (
-    set "PHP_BIN=C:\xampp\php\php.exe"
-) else if exist "D:\xampp\php\php.exe" (
-    set "PHP_BIN=D:\xampp\php\php.exe"
-) else if exist "E:\xampp\php\php.exe" (
-    set "PHP_BIN=E:\xampp\php\php.exe"
-) else if exist "C:\php\php.exe" (
-    set "PHP_BIN=C:\php\php.exe"
-) else if exist "C:\Program Files\PHP\php.exe" (
-    set "PHP_BIN=C:\Program Files\PHP\php.exe"
+
+:: Candidates list - XAMPP paths checked first to avoid unconfigured global PHP
+set PHP_PATHS="%~dp0..\..\php\php.exe" "C:\xampp\php\php.exe" "D:\xampp\php\php.exe" "E:\xampp\php\php.exe" "php" "C:\php\php.exe" "C:\Program Files\PHP\php.exe"
+
+for %%p in (%PHP_PATHS%) do (
+    if "!PHP_BIN!"=="" (
+        if "%%~p"=="php" (
+            where php >nul 2>&1
+            if !errorlevel! equ 0 (
+                php -r "exit((extension_loaded('pdo_mysql') || extension_loaded('mysqli')) ? 0 : 1);" >nul 2>&1
+                if !errorlevel! equ 0 (
+                    set "PHP_BIN=php"
+                ) else (
+                    php -d extension=pdo_mysql -r "exit(extension_loaded('pdo_mysql') ? 0 : 1);" >nul 2>&1
+                    if !errorlevel! equ 0 (
+                        set "PHP_BIN=php -d extension=pdo_mysql"
+                    )
+                )
+            )
+        ) else if exist "%%~p" (
+            "%%~p" -r "exit((extension_loaded('pdo_mysql') || extension_loaded('mysqli')) ? 0 : 1);" >nul 2>&1
+            if !errorlevel! equ 0 (
+                set "PHP_BIN=%%~p"
+            ) else (
+                "%%~p" -d extension=pdo_mysql -r "exit(extension_loaded('pdo_mysql') ? 0 : 1);" >nul 2>&1
+                if !errorlevel! equ 0 (
+                    set "PHP_BIN=%%~p -d extension=pdo_mysql"
+                )
+            )
+        )
+    )
 )
 
-if "%PHP_BIN%"=="" (
+:: If no candidate with verified driver was found, fallback to any detected PHP
+if "!PHP_BIN!"=="" (
+    if exist "%~dp0..\..\php\php.exe" (
+        set "PHP_BIN=%~dp0..\..\php\php.exe"
+    ) else if exist "C:\xampp\php\php.exe" (
+        set "PHP_BIN=C:\xampp\php\php.exe"
+    ) else if exist "D:\xampp\php\php.exe" (
+        set "PHP_BIN=D:\xampp\php\php.exe"
+    ) else (
+        where php >nul 2>&1
+        if !errorlevel! equ 0 set "PHP_BIN=php"
+    )
+)
+
+if "!PHP_BIN!"=="" (
     echo [ERROR] PHP executable was not found on your system!
     echo Please install XAMPP or add PHP to your Windows PATH environment variable.
     echo.
     pause
     exit /b 1
 )
-echo [OK] PHP detected: "%PHP_BIN%"
+echo [OK] PHP detected: "!PHP_BIN!"
 
 :: 2. Check and start MySQL server if needed
 echo [INFO] Checking MySQL connection on port 3306...
@@ -97,7 +127,7 @@ if !errorlevel! neq 0 (
     echo [OK] MySQL is active on port 3306.
 )
 
-:: 3. Locate MySQL CLI if available and ensure database 'naini' exists
+:: 3. Locate MySQL CLI if available and create database 'naini' immediately
 set "MYSQL_CLI="
 if exist "%~dp0..\..\mysql\bin\mysql.exe" (
     set "MYSQL_CLI=%~dp0..\..\mysql\bin\mysql.exe"
@@ -124,7 +154,7 @@ if not "%MYSQL_CLI%"=="" (
 echo.
 echo [INFO] Running database provisioner (setup_database.php)...
 echo ---------------------------------------------------------------
-"%PHP_BIN%" setup_database.php
+!PHP_BIN! setup_database.php
 if !errorlevel! neq 0 (
     echo.
     echo [ERROR] setup_database.php encountered an error connecting to MySQL.
@@ -137,7 +167,7 @@ echo ---------------------------------------------------------------
 echo [OK] Database 'naini' verified and synchronized.
 
 if exist "fix_orphan_students.php" (
-    "%PHP_BIN%" fix_orphan_students.php >nul 2>&1
+    !PHP_BIN! fix_orphan_students.php >nul 2>&1
 )
 
 :: 5. Smart port selection (use 8000 or fallback)
@@ -181,4 +211,4 @@ if "%~1"=="--test" (
 start "" "http://localhost:%PORT%"
 
 :: Start PHP built-in web server
-"%PHP_BIN%" -S localhost:%PORT%
+!PHP_BIN! -S localhost:%PORT%
